@@ -1,5 +1,5 @@
 from typing import List, Tuple
-from tile_parser import Tile, TileType
+from .tile_parser import Tile, TileType
 from collections import Counter
 
 class YakuDetector:
