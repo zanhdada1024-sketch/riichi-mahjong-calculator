@@ -4,9 +4,9 @@
 """
 
 from tile_parser import TileParser
-from .hand_analyzer import HandAnalyzer
-from .yaku_detector import YakuDetector
-from .points_calculator import PointsCalculator
+from hand_analyzer import HandAnalyzer
+from yaku_detector import YakuDetector
+from points_calculator import PointsCalculator
 
 __all__ = [
     'TileParser',
