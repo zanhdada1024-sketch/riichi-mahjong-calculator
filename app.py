@@ -6,9 +6,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from src.tile_parser import TileParser
-from hand_analyzer import HandAnalyzer
-from yaku_detector import YakuDetector
-from points_calculator import PointsCalculator
+from src.hand_analyzer import HandAnalyzer
+from src.yaku_detector import YakuDetector
+from src.points_calculator import PointsCalculator
 
 # Page config
 st.set_page_config(
