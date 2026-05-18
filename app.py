@@ -69,7 +69,7 @@ col1, col2 = st.columns([1.5, 1])
 with col1:
     st.subheader("🎴 輸入手牌")
     st.markdown("**格式說明**: 使用 m(萬子) p(筒子) s(索子) z(字牌)")
-    st.markdown("**例子**: `123m456p789s1122z`")
+    st.markdown("**例子**: `123m456p789s11222z`")
     
     hand_input = st.text_input(
         "手牌輸入",
