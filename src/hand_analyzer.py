@@ -7,7 +7,7 @@ class HandAnalyzer:
     
     def is_winning_hand(self, tiles: List[Tile]) -> bool:
         """
-        判斷是否是和牌
+        判斷是否是和牌 - 使用改進的標準麻將和牌判定
         
         Args:
             tiles: 14張牌
@@ -18,22 +18,73 @@ class HandAnalyzer:
         if len(tiles) != 14:
             return False
         
-        # 檢查是否滿足基本和牌條件
-        # 1. 有1對
-        # 2. 剩餘12張可組成4個面子
+        # 計算牌的計數
+        tile_counter = Counter((t.tile_type.value, t.number) for t in tiles)
         
-        # 按花色分組
-        tiles_by_type = self._group_by_type(tiles)
-        
-        # 嘗試所有可能的對子
-        for pair_tile in set(tiles):
-            remaining = tiles.copy()
-            if remaining.count(pair_tile) >= 2:
-                remaining.remove(pair_tile)
-                remaining.remove(pair_tile)
+        # 嘗試每一種牌作為對子
+        for (tile_type, number), count in tile_counter.items():
+            if count >= 2:
+                # 移除對子
+                remaining = tile_counter.copy()
+                remaining[(tile_type, number)] -= 2
+                if remaining[(tile_type, number)] == 0:
+                    del remaining[(tile_type, number)]
                 
-                if self._can_form_melds(remaining):
+                # 檢查剩餘12張牌是否能組成4個面子
+                if self._can_form_melds_from_counter(remaining):
                     return True
+        
+        return False
+    
+    def _can_form_melds_from_counter(self, tile_counter: Counter) -> bool:
+        """
+        使用計數器檢查牌是否能組成面子
+        
+        Args:
+            tile_counter: 牌的計數字典
+        
+        Returns:
+            是否能組成面子
+        """
+        if sum(tile_counter.values()) == 0:
+            return True
+        
+        # 複製計數器以便修改
+        remaining = tile_counter.copy()
+        
+        # 找第一個非零的牌
+        first_tile = None
+        for tile_key in sorted(remaining.keys()):
+            if remaining[tile_key] > 0:
+                first_tile = tile_key
+                break
+        
+        if first_tile is None:
+            return True
+        
+        tile_type, number = first_tile
+        
+        # 嘗試形成刻子 (triplet: 3張相同的牌)
+        if remaining[(tile_type, number)] >= 3:
+            remaining[(tile_type, number)] -= 3
+            if self._can_form_melds_from_counter(remaining):
+                return True
+            remaining[(tile_type, number)] += 3
+        
+        # 嘗試形成順子 (sequence: n, n+1, n+2)
+        # 順子只適用於數牌（不是字牌）
+        if tile_type in ['m', 'p', 's'] and number <= 7:
+            if remaining[(tile_type, number + 1)] > 0 and remaining[(tile_type, number + 2)] > 0:
+                remaining[(tile_type, number)] -= 1
+                remaining[(tile_type, number + 1)] -= 1
+                remaining[(tile_type, number + 2)] -= 1
+                
+                if self._can_form_melds_from_counter(remaining):
+                    return True
+                
+                remaining[(tile_type, number)] += 1
+                remaining[(tile_type, number + 1)] += 1
+                remaining[(tile_type, number + 2)] += 1
         
         return False
     
@@ -95,20 +146,21 @@ class HandAnalyzer:
                         tiles_by_type[tile_type].append(first_num)
                     tiles_by_type[tile_type].sort()
                 
-                # 嘗試形成順子
-                first_num = tiles_by_type[tile_type][0]
-                if first_num <= 7 and first_num + 1 in tiles_by_type[tile_type] and first_num + 2 in tiles_by_type[tile_type]:
-                    # 移除順子
-                    tiles_by_type[tile_type].remove(first_num)
-                    tiles_by_type[tile_type].remove(first_num + 1)
-                    tiles_by_type[tile_type].remove(first_num + 2)
-                    
-                    if self._try_form_melds(tiles_by_type):
-                        return True
-                    
-                    # 恢復
-                    tiles_by_type[tile_type].extend([first_num, first_num + 1, first_num + 2])
-                    tiles_by_type[tile_type].sort()
+                # 嘗試形成順子（只適用於數牌）
+                if tile_type in ['m', 'p', 's']:
+                    first_num = tiles_by_type[tile_type][0]
+                    if first_num <= 7 and first_num + 1 in tiles_by_type[tile_type] and first_num + 2 in tiles_by_type[tile_type]:
+                        # 移除順子
+                        tiles_by_type[tile_type].remove(first_num)
+                        tiles_by_type[tile_type].remove(first_num + 1)
+                        tiles_by_type[tile_type].remove(first_num + 2)
+                        
+                        if self._try_form_melds(tiles_by_type):
+                            return True
+                        
+                        # 恢復
+                        tiles_by_type[tile_type].extend([first_num, first_num + 1, first_num + 2])
+                        tiles_by_type[tile_type].sort()
                 
                 return False
         
