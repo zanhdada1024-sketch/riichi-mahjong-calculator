@@ -5,6 +5,16 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent))
 
+# Force reload modules
+if 'src.yaku_detector' in sys.modules:
+    del sys.modules['src.yaku_detector']
+if 'src.tile_parser' in sys.modules:
+    del sys.modules['src.tile_parser']
+if 'src.hand_analyzer' in sys.modules:
+    del sys.modules['src.hand_analyzer']
+if 'src.points_calculator' in sys.modules:
+    del sys.modules['src.points_calculator']
+
 from src.tile_parser import Tile, TileType
 from src.hand_analyzer import HandAnalyzer
 from src.yaku_detector import YakuDetector
@@ -22,12 +32,12 @@ st.set_page_config(
 if 'selected_tiles' not in st.session_state:
     st.session_state.selected_tiles = []
 
-# Emoji mapping for tiles
+# Emoji mapping for tiles - 字牌順序修正！
 TILE_EMOJI = {
     'm': {1: '1️⃣', 2: '2️⃣', 3: '3️⃣', 4: '4️⃣', 5: '5️⃣', 6: '6️⃣', 7: '7️⃣', 8: '8️⃣', 9: '9️⃣'},
     'p': {1: '🔴', 2: '🟠', 3: '🟡', 4: '🟢', 5: '🔵', 6: '🟣', 7: '🟤', 8: '⚪', 9: '⚫'},
     's': {1: '🌾', 2: '🌿', 3: '🍀', 4: '🌱', 5: '🌲', 6: '🌳', 7: '🌴', 8: '🎋', 9: '🎍'},
-    'z': {1: '🀄', 2: '🀅', 3: '🀆', 4: '🀇', 5: '🀈', 6: '🀉', 7: '🀊'}
+    'z': {1: '🀄', 2: '🀅', 3: '🀆', 4: '🀇', 5: '⚪', 6: '🟢', 7: '🔴'}  # 1=東 2=南 3=西 4=北 5=白 6=發 7=中
 }
 
 # ============================================================================
@@ -94,13 +104,14 @@ with suit_tabs[2]:
 
 # Honor (Jihai) - 字牌
 with suit_tabs[3]:
-    st.markdown("#### 字牌 (東南西北白發中)")
+    st.markdown("#### 字牌 (東南西北中發白)")
     honor_names = ['東', '南', '西', '北', '白', '發', '中']
+    honor_emojis = ['🀄', '🀅', '🀆', '🀇', '⚪', '🟢', '🔴']
     cols = st.columns(7)
     for num in range(1, 8):
         with cols[num-1]:
             if st.button(
-                f"{TILE_EMOJI['z'][num]}\n{honor_names[num-1]}",
+                f"{honor_emojis[num-1]}\n{honor_names[num-1]}",
                 key=f"btn_z{num}",
                 use_container_width=True,
                 help=f"點擊添加{honor_names[num-1]}"
@@ -457,7 +468,7 @@ if calculate_button:
 st.markdown("---")
 st.markdown(
     "<div style='text-align: center; color: gray; font-size: 0.85rem;'>"
-    "日麻點數計算助手 v6.0 | 完整場況 + 所有役種列表"
+    "日麻點數計算助手 v6.1 | 完整場況 + 所有役種列表 | 已修復"
     "</div>",
     unsafe_allow_html=True
 )
