@@ -106,7 +106,7 @@ with suit_tabs[2]:
 with suit_tabs[3]:
     st.markdown("#### 字牌 (東南西北中發白)")
     honor_names = ['東', '南', '西', '北', '白', '發', '中']
-    honor_emojis = ['🀄', '🀅', '🀆', '🀇', '⚪', '🟢', '🔴']
+    honor_emojis = ['🀀', '🀁', '🀂', '🀃', '🀆', '🀅', '🀄']
     cols = st.columns(7)
     for num in range(1, 8):
         with cols[num-1]:
