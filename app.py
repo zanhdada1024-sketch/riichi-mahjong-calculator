@@ -30,10 +30,6 @@ TILE_EMOJI = {
     'z': {1: '🀄', 2: '🀅', 3: '🀆', 4: '🀇', 5: '🀈', 6: '🀉', 7: '🀊'}
 }
 
-TILE_NAME = {
-    'z': {1: '東', 2: '南', 3: '西', 4: '北', 5: '白', 6: '發', 7: '中'}
-}
-
 # ============================================================================
 # MAIN UI
 # ============================================================================
@@ -156,9 +152,9 @@ else:
 st.markdown("---")
 st.subheader("⚙️ 場況設置")
 
-settings_col1, settings_col2, settings_col3, settings_col4 = st.columns(4)
+col_basic1, col_basic2, col_basic3, col_basic4 = st.columns(4)
 
-with settings_col1:
+with col_basic1:
     is_parent = st.radio(
         "玩家身份",
         ["👑 親家", "👤 子家"],
@@ -166,7 +162,7 @@ with settings_col1:
         label_visibility="collapsed"
     ) == "👑 親家"
 
-with settings_col2:
+with col_basic2:
     is_tsumo = st.radio(
         "勝利方式",
         ["🎯 自摸", "🎪 榮和"],
@@ -174,11 +170,42 @@ with settings_col2:
         label_visibility="collapsed"
     ) == "🎯 自摸"
 
-with settings_col3:
+with col_basic3:
     dora = st.number_input("🎁 寶牌數", min_value=0, max_value=10, value=0, step=1)
 
-with settings_col4:
+with col_basic4:
     is_riichi = st.checkbox("⚡ 立直", value=False)
+
+# ============================================================================
+# ADVANCED SETTINGS
+# ============================================================================
+
+st.markdown("---")
+st.subheader("🎲 進階設置")
+
+col_adv1, col_adv2, col_adv3, col_adv4 = st.columns(4)
+
+with col_adv1:
+    field_wind = st.radio(
+        "🌍 場風",
+        ["東", "南", "西", "北"],
+        index=0,
+        label_visibility="collapsed"
+    )
+
+with col_adv2:
+    player_wind = st.radio(
+        "👤 自風",
+        ["東", "南", "西", "北"],
+        index=0,
+        label_visibility="collapsed"
+    )
+
+with col_adv3:
+    honba = st.number_input("💰 本場數", min_value=0, max_value=10, value=0, step=1)
+
+with col_adv4:
+    ura_dora = st.number_input("🔴 裏寶牌數", min_value=0, max_value=10, value=0, step=1)
 
 # ============================================================================
 # CALCULATE BUTTON
@@ -215,7 +242,10 @@ if calculate_button:
             if not is_winning:
                 st.error("❌ 不是和牌！\n\n這個手牌組合不符合和牌條件，請檢查是否輸入正確。")
             else:
-                # Detect yaku
+                # Get all yakus and check which are possible
+                all_yakus = detector.detect_all_yakus(tiles, is_tsumo)
+                
+                # Detect primary yaku
                 detected_yakus = detector.detect_yaku(tiles, is_tsumo)
                 
                 # Calculate han and fu
@@ -233,8 +263,8 @@ if calculate_button:
                     yaku_names.insert(0, "⚡ 立直")
                     han += 1
                 
-                # Total han with dora
-                total_han = han + dora
+                # Total han with dora and ura dora
+                total_han = han + dora + ura_dora
                 
                 # ============================================================
                 # DISPLAY RESULTS
@@ -244,13 +274,13 @@ if calculate_button:
                 st.success("✅ 和牌成功！")
                 
                 # Yaku display
-                st.markdown("### 🎯 役種")
+                st.markdown("### 🎯 識別的役種")
                 yaku_display = " + ".join(yaku_names) if yaku_names else "通常役"
                 st.markdown(f"#### {yaku_display}")
                 
                 # Stats
                 st.markdown("---")
-                col1, col2, col3, col4 = st.columns(4)
+                col1, col2, col3, col4, col5 = st.columns(5)
                 
                 with col1:
                     st.metric("翻數", f"{total_han} 翻")
@@ -259,9 +289,12 @@ if calculate_button:
                     st.metric("符數", f"{fu} 符")
                 
                 with col3:
-                    st.metric("寶牌", f"{dora} 張")
+                    st.metric("寶牌", f"{dora + ura_dora} 張")
                 
                 with col4:
+                    st.metric("本場", f"{honba} 場")
+                
+                with col5:
                     if total_han >= 5:
                         if total_han >= 13:
                             mangan_type = "役滿"
@@ -287,11 +320,14 @@ if calculate_button:
                     if is_tsumo:
                         child_payment = calculator.calculate_parent_tsumo_payment(total_han, fu)
                         total_payment = child_payment * 3
+                        honba_payment = 100 * honba
+                        total_payment += honba_payment
                         
                         with col_payment1:
                             st.info(
                                 f"### 👑 親自摸\n\n"
                                 f"**每個子家支付**: {child_payment:,} 點\n\n"
+                                f"**本場收益**: {honba_payment:,} 點\n\n"
                                 f"**獲得總點**: {total_payment:,} 點"
                             )
                         
@@ -300,32 +336,42 @@ if calculate_button:
                             st.markdown(f"🔹 子家 1: {child_payment:,} 點")
                             st.markdown(f"🔹 子家 2: {child_payment:,} 點")
                             st.markdown(f"🔹 子家 3: {child_payment:,} 點")
+                            st.markdown(f"🔹 本場收益: {honba_payment:,} 點")
                             st.markdown(f"---")
                             st.markdown(f"**合計**: {total_payment:,} 點")
                     else:
                         payment = calculator.calculate_parent_ron_payment(total_han, fu)
+                        honba_payment = 300 * honba
+                        total_payment = payment + honba_payment
                         
                         with col_payment1:
                             st.info(
                                 f"### 👑 親榮和\n\n"
                                 f"**放銃者支付**: {payment:,} 點\n\n"
-                                f"**獲得點**: {payment:,} 點"
+                                f"**本場收益**: {honba_payment:,} 點\n\n"
+                                f"**獲得點**: {total_payment:,} 點"
                             )
                         
                         with col_payment2:
                             st.markdown("#### 支付詳情")
                             st.markdown(f"🔹 放銃者: {payment:,} 點")
+                            st.markdown(f"🔹 本場收益: {honba_payment:,} 點")
+                            st.markdown(f"---")
+                            st.markdown(f"**合計**: {total_payment:,} 點")
                 else:
                     if is_tsumo:
                         parent_payment = calculator.calculate_child_tsumo_parent_payment(total_han, fu)
                         child_payment = calculator.calculate_child_tsumo_child_payment(total_han, fu)
                         total_payment = parent_payment + (child_payment * 2)
+                        honba_payment = 100 * honba
+                        total_payment += honba_payment
                         
                         with col_payment1:
                             st.info(
                                 f"### 👤 子自摸\n\n"
                                 f"**親家支付**: {parent_payment:,} 點\n\n"
                                 f"**子家各支付**: {child_payment:,} 點\n\n"
+                                f"**本場收益**: {honba_payment:,} 點\n\n"
                                 f"**獲得總點**: {total_payment:,} 點"
                             )
                         
@@ -334,21 +380,28 @@ if calculate_button:
                             st.markdown(f"🔹 親家: {parent_payment:,} 點")
                             st.markdown(f"🔹 子家 1: {child_payment:,} 點")
                             st.markdown(f"🔹 子家 2: {child_payment:,} 點")
+                            st.markdown(f"🔹 本場收益: {honba_payment:,} 點")
                             st.markdown(f"---")
                             st.markdown(f"**合計**: {total_payment:,} 點")
                     else:
                         payment = calculator.calculate_child_ron_payment(total_han, fu)
+                        honba_payment = 300 * honba
+                        total_payment = payment + honba_payment
                         
                         with col_payment1:
                             st.info(
                                 f"### 👤 子榮和\n\n"
                                 f"**放銃者支付**: {payment:,} 點\n\n"
-                                f"**獲得點**: {payment:,} 點"
+                                f"**本場收益**: {honba_payment:,} 點\n\n"
+                                f"**獲得點**: {total_payment:,} 點"
                             )
                         
                         with col_payment2:
                             st.markdown("#### 支付詳情")
                             st.markdown(f"🔹 放銃者: {payment:,} 點")
+                            st.markdown(f"🔹 本場收益: {honba_payment:,} 點")
+                            st.markdown(f"---")
+                            st.markdown(f"**合計**: {total_payment:,} 點")
                 
                 # Hand analysis
                 st.markdown("---")
@@ -356,7 +409,7 @@ if calculate_button:
                 
                 hand_analysis = analyzer.analyze_hand_structure(tiles)
                 
-                col_analysis1, col_analysis2, col_analysis3 = st.columns(3)
+                col_analysis1, col_analysis2, col_analysis3, col_analysis4 = st.columns(4)
                 
                 with col_analysis1:
                     st.metric("花色數", f"{hand_analysis['color_count']} 種")
@@ -368,9 +421,34 @@ if calculate_button:
                 with col_analysis3:
                     has_honor_text = "✅ 有" if hand_analysis['has_honor'] else "❌ 無"
                     st.metric("字牌", has_honor_text)
+                
+                with col_analysis4:
+                    st.metric("場風", field_wind)
+                
+                # Show all possible yakus
+                st.markdown("---")
+                st.markdown("### 📋 所有可能的役種")
+                
+                yaku_cols = st.columns(3)
+                col_idx = 0
+                
+                for yaku_name in sorted(all_yakus.keys()):
+                    yaku_info = all_yakus[yaku_name]
+                    is_possible = yaku_info.get('possible', False)
+                    han_count = yaku_info.get('han', 0)
+                    
+                    with yaku_cols[col_idx % 3]:
+                        if is_possible:
+                            st.success(f"✅ {yaku_name}\n({han_count} 翻)")
+                        else:
+                            st.write(f"❌ {yaku_name}\n({han_count} 翻)")
+                    
+                    col_idx += 1
         
         except Exception as e:
             st.error(f"❌ 計算發生錯誤\n\n{str(e)}")
+            import traceback
+            st.write(traceback.format_exc())
 
 # ============================================================================
 # FOOTER
@@ -379,7 +457,7 @@ if calculate_button:
 st.markdown("---")
 st.markdown(
     "<div style='text-align: center; color: gray; font-size: 0.85rem;'>"
-    "日麻點數計算助手 v5.0 | 純視覺化牌選 + 自動役種判定"
+    "日麻點數計算助手 v6.0 | 完整場況 + 所有役種列表"
     "</div>",
     unsafe_allow_html=True
 )
